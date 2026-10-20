@@ -1,0 +1,142 @@
+
+name: Automated GitHub Releases
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-snek-releases
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract newest changelog section
+        id: changelog
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import uuid
+          from pathlib import Path
+
+          path = Path("CHANGELOG.md")
+          if not path.is_file():
+              raise SystemExit("CHANGELOG.md was not found.")
+
+          text = path.read_text(encoding="utf-8")
+
+          # Supports headings such as:
+          # ## [1.2.0] - 2026-10-20
+          # ## 1.2.0
+          heading = re.compile(
+              r"(?m)^##\s+\[?v?"
+              r"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?"
+              r"(?:\+[0-9A-Za-z.-]+)?)"
+              r"\]?(?:\s+-.*)?\s*$"
+          )
+
+          match = heading.search(text)
+          if not match:
+              raise SystemExit(
+                  "No version heading found in CHANGELOG.md. "
+                  "Expected a heading like '## [1.2.0] - 2026-10-20'."
+              )
+
+          following = re.search(
+              r"(?m)^##\s+",
+              text[match.end():]
+          )
+
+          end = (
+              match.end() + following.start()
+              if following else len(text)
+          )
+
+          notes = text[match.end():end].strip()
+          if not notes:
+              raise SystemExit(
+                  f"The changelog section for {match.group(1)} is empty."
+              )
+
+          version = match.group(1)
+          delimiter = "CHANGELOG_" + uuid.uuid4().hex
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"version={version}\n")
+              f.write(f"notes<<{delimiter}\n")
+              f.write(notes + "\n")
+              f.write(f"{delimiter}\n")
+
+          print(f"Using changelog version: {version}")
+          PY
+
+      - name: Determine commits to release
+        id: commits
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          if [[ -n "$BEFORE_SHA" ]] &&
+             [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            # First push to this branch: release its tip only.
+            git rev-list -n 1 "$COMMIT_SHA" > commits.txt
+          elif [[ -n "$BEFORE_SHA" ]] &&
+               git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            git rev-list --reverse \
+              "${BEFORE_SHA}..${COMMIT_SHA}" > commits.txt
+          else
+            # Manual workflow run: release the selected commit.
+            git rev-list -n 1 "$COMMIT_SHA" > commits.txt
+          fi
+
+          if [[ ! -s commits.txt ]]; then
+            echo "No new commits to release."
+            exit 1
+          fi
+
+          echo "Commits queued for release:"
+          cat commits.txt
+
+      - name: Create GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.changelog.outputs.version }}
+          RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
+        shell: bash
+        run: |
+          while IFS= read -r COMMIT; do
+            SHORT_SHA="${COMMIT:0:12}"
+            TAG="v${RELEASE_VERSION}-commit-${SHORT_SHA}"
+
+            if gh release view "$TAG" \
+              --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Already released: $TAG"
+              continue
+            fi
+
+            echo "Creating release: $TAG"
+
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$COMMIT" \
+              --title "Daily.snek ${RELEASE_VERSION} (${SHORT_SHA})" \
+              --notes "$RELEASE_NOTES"
+
+          done < commits.txt
