@@ -1,6 +1,18 @@
 # Changelog
 
 
+
+## [1.2.1] - 2026-10-20
+
+- Summary: Added AUTOMATION!
+- Feature: github workflow
+- Feature: improved release script
+- Improvement: more automation
+- Fix: None
+- Breaking change: None
+- Migration: None
+- Validation: Tested the workflows
+
 ## [1.2.0] - 2026-10-20
 
 - Fixed __init__.py
