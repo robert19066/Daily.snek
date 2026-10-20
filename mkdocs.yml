@@ -1,0 +1,46 @@
+site_name: dailydotsnek
+site_description: "A rate-limit-aware Python client for the daily.dev public API."
+docs_dir: docs
+
+nav:
+  - Overview: index.md
+  - Get started:
+      - Installation: installation.md
+      - Quickstart: usage.md
+  - Reference:
+      - SDK methods: api.md
+      - Errors & rate limits: rate-limits.md
+  - Project:
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+      - Publishing: publishing.md
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: green
+      accent: lime
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: green
+      accent: lime
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - toc:
+      permalink: true

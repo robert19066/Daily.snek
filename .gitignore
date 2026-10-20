@@ -1,0 +1,6 @@
+test.txt
+.env
+.venv/
+__pycache__/
+dist/
+site/
