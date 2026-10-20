@@ -48,3 +48,15 @@ Never reuse the TestPyPI token for the production upload, or the PyPI token for 
 - Check the package name, README rendering, dependencies, and release files.
 
 For CI publishing, use PyPI's trusted publishing where supported, or store narrowly scoped API tokens in the CI secret store. Never put credentials in the repository.
+
+## Automated release helper
+
+From a clean checkout on a branch with an `origin` remote, run:
+
+```powershell
+python release.py
+```
+
+The interactive release planner asks for the version change, a user-facing summary, categorized features/improvements/fixes/breaking changes and migration guidance, validation performed, and a Git commit title. It previews the version and notes before writing release files. The helper then builds and validates the distributions, asks before publishing to the production PyPI repository, and only after a successful upload commits the release files and pushes the selected branch to `origin`.
+
+The working tree must be clean before starting so unrelated changes cannot be included in the release commit. A successful push to `main` also triggers the repository's GitHub release workflow. Use `python release.py --dry-run` to preview the survey and generated exports without requiring Git credentials or changing, publishing, committing, or pushing anything.

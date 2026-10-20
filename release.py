@@ -18,7 +18,7 @@ from pathlib import Path
 
 import tomlkit
 
-from map_src import map_src
+from map_src import map_src, package_directories
 
 
 ROOT = Path(__file__).resolve().parent
@@ -342,24 +342,50 @@ def update_changelog(
 
 
 def collect_notes() -> list[str]:
-    """Collect changelog notes until a dot is entered."""
-    print("\nEnter release notes, one per line. Enter '.' when finished.")
+    """Collect a release summary, categorized changes, and validation notes."""
+    print("\n== Release details ==")
+    print("Write notes for users; press Enter on a blank line to skip a category.")
 
-    notes = []
+    summary = input("\nRelease summary: ").strip()
+    if not summary:
+        raise ValueError("A release summary is required.")
 
-    while True:
-        line = input("- ").strip()
+    notes = [f"Summary: {summary}"]
 
-        if line == ".":
-            break
+    categories = (
+        ("Features", "Feature"),
+        ("Improvements", "Improvement"),
+        ("Bug fixes", "Fix"),
+        ("Breaking changes", "Breaking change"),
+        ("Migration guidance", "Migration"),
+    )
 
-        if line:
-            notes.append(line.lstrip("-* ").strip())
+    for heading, label in categories:
+        print(f"\n{heading} (blank line to finish):")
+        while True:
+            note = input("  - ").strip()
+            if not note:
+                break
+            notes.append(f"{label}: {note.lstrip('-* ').strip()}")
 
-    if not notes:
-        raise ValueError("At least one changelog entry is required.")
+    validation = input("\nTests and validation performed: ").strip()
+    if not validation:
+        raise ValueError("Describe the tests or validation performed.")
+    notes.append(f"Validation: {validation}")
 
     return notes
+
+
+def collect_commit_name() -> str:
+    """Ask for the commit subject to use after the package is published."""
+    print("\n== GitHub commit ==")
+    print("Use a short, descriptive commit title (for example: Release 1.3.0).")
+    commit_name = input("Commit title: ").strip()
+
+    if not commit_name:
+        raise ValueError("A commit title is required.")
+
+    return commit_name
 
 
 def confirm(message: str) -> bool:
@@ -367,6 +393,69 @@ def confirm(message: str) -> bool:
     return input(f"{message} [y/N]: ").strip().lower() in {
         "y", "yes"
     }
+
+
+def git_output(arguments: list[str]) -> str:
+    """Run a Git query and return its output with an actionable error."""
+    result = subprocess.run(
+        ["git", *arguments],
+        check=False,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode:
+        details = result.stderr.strip() or result.stdout.strip()
+        raise RuntimeError(
+            f"git {' '.join(arguments)} failed"
+            + (f": {details}" if details else ".")
+        )
+
+    return result.stdout.strip()
+
+
+def prepare_git_release() -> tuple[str, str]:
+    """Ensure this release can be committed and pushed without other changes."""
+    status = git_output(["status", "--porcelain"])
+    if status:
+        raise ValueError(
+            "The working tree is not clean. Commit or stash existing changes "
+            "before running a release so they are not included accidentally."
+        )
+
+    branch = git_output(["branch", "--show-current"])
+    if not branch:
+        raise ValueError("A release cannot be pushed from a detached HEAD.")
+
+    git_output(["remote", "get-url", "origin"])
+    return branch, "origin"
+
+
+def git_release_paths(
+    src: Path,
+    project_path: Path,
+    changelog_path: Path,
+) -> list[str]:
+    """Return the release-owned paths to stage, relative to the repository."""
+    generated_exports = [
+        directory / "__init__.py"
+        for directory in package_directories(src)
+    ]
+    paths = [project_path, changelog_path, *generated_exports]
+    relative_paths = []
+
+    for path in paths:
+        try:
+            relative_paths.append(
+                path.resolve().relative_to(ROOT).as_posix()
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Release file is outside the repository: {path}"
+            ) from exc
+
+    return sorted(set(relative_paths))
 
 
 def build_and_validate(output: Path) -> list[Path]:
@@ -418,6 +507,10 @@ def main() -> int:
         if not src.is_dir():
             raise NotADirectoryError(f"Source directory not found: {src}")
 
+        git_context = (
+            None if args.dry_run else prepare_git_release()
+        )
+
         document = load_project(project_path)
         old_version = current_version(document)
 
@@ -431,8 +524,15 @@ def main() -> int:
 
         print("\nNew dependencies:", ", ".join(added) if added else "none")
 
-        print("\n== Release survey ==")
-        print("1. PATCH\n2. MINOR\n3. MEDIUM\n4. MAJOR")
+        print("\n+------------------------------------------------------------+")
+        print("|                    RELEASE PLANNER                        |")
+        print("+------------------------------------------------------------+")
+        print(f"  Current version: {old_version}")
+        print("  Choose the size of the public change:")
+        print("    1. PATCH  - backward-compatible bug fixes or small polish")
+        print("    2. MINOR  - backward-compatible features and improvements")
+        print("    3. MEDIUM - legacy name; same version bump as MINOR")
+        print("    4. MAJOR  - breaking changes that may need migration")
 
         choice = input("Release type (1-4 or name): ").strip().upper()
 
@@ -449,16 +549,37 @@ def main() -> int:
 
         new_version = bump_version(old_version, release_type)
         notes = collect_notes()
+        commit_name = collect_commit_name()
 
-        print(f"\nVersion: {old_version} -> {new_version}")
-        print(f"Release type: {release_type}")
+        print("\n+----------------------- RELEASE PREVIEW --------------------+")
+        print(f"  Version:      {old_version} -> {new_version}")
+        print(f"  Release type: {release_type}")
+        print(f"  Commit title: {commit_name}")
+        print("  Release notes:")
+        for note in notes:
+            print(f"    - {note}")
+        print("+------------------------------------------------------------+")
 
         if args.dry_run:
-            print("\nDry run: no files written and nothing published.")
+            print(
+                "\nDry run: no files written, published, committed, or pushed."
+            )
             print("New dependency declarations:", added)
             return 0
 
-        if not confirm("Write generated exports, dependencies, version, and changelog?"):
+        if git_context is None:
+            raise RuntimeError("Git release context was not prepared.")
+        branch, remote = git_context
+        release_paths = git_release_paths(
+            src,
+            project_path,
+            changelog_path,
+        )
+
+        if not confirm(
+            "Write release files, publish to PyPI, then commit and push "
+            f"to {remote}/{branch}?"
+        ):
             print("Cancelled.")
             return 0
 
@@ -491,7 +612,24 @@ def main() -> int:
                 *[str(path) for path in artifacts],
             ])
 
-        print(f"\nSuccessfully published version {new_version}.")
+        print(f"\nSuccessfully published version {new_version} to PyPI.")
+        try:
+            run(["git", "add", "--", *release_paths])
+            run(["git", "commit", "-m", commit_name])
+            run(["git", "push", remote, branch])
+        except (OSError, subprocess.CalledProcessError, RuntimeError) as exc:
+            print(
+                "\nPyPI publication succeeded, but the GitHub commit/push "
+                f"failed: {exc}\n"
+                "Resolve the Git issue, then finish committing and pushing "
+                "the release files manually as needed.",
+                file=sys.stderr,
+            )
+            return 1
+
+        print(
+            f"Committed '{commit_name}' and pushed to {remote}/{branch}."
+        )
         return 0
 
     except (
