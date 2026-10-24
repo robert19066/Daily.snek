@@ -2,6 +2,17 @@
 
 
 
+
+## [1.3.0] - 2026-10-25
+
+- Summary: Added some errors, small changes overall.
+- Feature: 3 errors for now, will add more later
+- Feature: Small changes here and there
+- Improvement: Added errors
+- Fix: Some bugfixes related to the token system
+- Breaking change: raw fetch MAY not work i didn't have time to test.
+- Validation: none
+
 ## [1.2.1] - 2026-10-20
 
 - Summary: Added AUTOMATION!
