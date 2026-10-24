@@ -12,13 +12,13 @@ class AutoApiToken:
     """
     Reads the API token from the DAILY_DEV_KEY environment variable or .env file.
     """
-    def __init__(self):
+    def __init__(self, apienvkeyname: str = "DAILY_DEV_KEY"):
         dotenv.load_dotenv()
-        self.token = os.getenv("DAILY_DEV_KEY")
+        self.token = os.getenv(apienvkeyname)
         if not self.token:
             raise ValueError(
-                "DAILY_DEV_KEY is not set. Set it in your environment or .env file."
+                "Apienvkeyname is not set. Just type the name of your env variable with the token. "
             )
 
     def get_token(self) -> str:
-        return self.token
+        return self.token # pyright: ignore[reportReturnType]

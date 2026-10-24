@@ -6,23 +6,7 @@ import time
 import requests
 
 from .tokenSys import AutoApiToken, ManualApiToken
-
-
-class RateLimitError(requests.HTTPError):
-    """Raised when the API rate limit is reached and the request cannot be retried."""
-
-    def __init__(self, response: requests.Response, retry_after: float | None):
-        self.retry_after = retry_after
-        wait_message = (
-            f" Retry after {retry_after:g} seconds."
-            if retry_after is not None
-            else ""
-        )
-        super().__init__(
-            f"Daily.dev API rate limit reached (HTTP 429).{wait_message}",
-            response=response,
-        )
-
+from .errors import RateLimitError 
 
 class RawFetch:
     def __init__(
