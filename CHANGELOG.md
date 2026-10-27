@@ -1,6 +1,16 @@
 # Changelog
 
-
+## [2.0.0] - 2026-10-27
+- Feature: OAuth integration
+- Feature: Updated API support
+- Feature: Fixed typing sloooop
+- Feature: Added a refined SKILL.md
+- Feature: Agent integration
+- Improvement: Better and more conside sintax
+- Improvement: Fixed some typing slop
+- Improvement: added SKILL.md
+- Fix: None
+- Breaking change: Now all functions have pythonic case, but the legacy compatability camel case functions are still kept. I recomand switching to the pythonic case ones.
 
 
 ## [1.3.0] - 2026-10-25
