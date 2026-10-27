@@ -14,10 +14,10 @@ For a `429 Too Many Requests` response:
 This default is bounded. A caller may catch `RateLimitError` and decide when a later operation is appropriate:
 
 ```python
-from snek.rawFetch import RateLimitError
+from snek import RateLimitError
 
 try:
-    result = client.getPopularFeed()
+    result = client.get_popular_feed()
 except RateLimitError as error:
     print("Rate limit response:", error.response.status_code)
     if error.retry_after is not None:
@@ -36,4 +36,7 @@ Catch only the error types your application can handle; allow unexpected failure
 
 ## Inspecting rate-limit headers
 
-The helper methods `client.getRateLimit()`, `client.getRateRemaining()`, `client.getRateResetTime()`, and `client.getRetryTime()` read headers from the latest API response. They do not make additional API calls. Each returns a string or `None`.
+The helper methods `client.get_rate_limit()`, `client.get_rate_remaining()`,
+`client.get_rate_reset_time()`, and `client.get_retry_time()` read headers from
+the latest API response. They do not make additional API calls. Each returns a
+string or `None`. The original camelCase helper names remain available.

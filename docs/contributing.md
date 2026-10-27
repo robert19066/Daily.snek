@@ -16,12 +16,17 @@ Code style
 
 Testing
 
-Install the package in editable mode, then run the test suite:
+Install the package with development checks, then run the same checks as CI:
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ".[dev]"
+python -m ruff format --check src tests
+python -m ruff check src tests
 python -m unittest discover -s tests -v
+python -m build
 ```
+
+GitHub Actions runs these checks on every push and pull request.
 
 Documentation
 

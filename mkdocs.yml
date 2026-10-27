@@ -10,6 +10,7 @@ nav:
   - Reference:
       - SDK methods: api.md
       - Errors & rate limits: rate-limits.md
+      - OAuth & MCP: oauth-mcp.md
   - Project:
       - Contributing: contributing.md
       - Changelog: changelog.md

@@ -1,6 +1,7 @@
 import os
 import dotenv
 
+
 class ManualApiToken:
     def __init__(self, token: str):
         self.token = token
@@ -8,10 +9,12 @@ class ManualApiToken:
     def get_token(self) -> str:
         return self.token
 
+
 class AutoApiToken:
     """
     Reads the API token from the DAILY_DEV_KEY environment variable or .env file.
     """
+
     def __init__(self, apienvkeyname: str = "DAILY_DEV_KEY"):
         dotenv.load_dotenv()
         self.token = os.getenv(apienvkeyname)
@@ -21,4 +24,4 @@ class AutoApiToken:
             )
 
     def get_token(self) -> str:
-        return self.token # pyright: ignore[reportReturnType]
+        return self.token  # pyright: ignore[reportReturnType]

@@ -7,7 +7,7 @@
 <p align="center">
   A small, friendly Python client for the daily.dev public API.
   <br>
-  Feeds, posts, bookmarks, profile tools, and search — with rate-limit-aware GET retries.
+  Feeds, Plus features, profile tools, and search — with rate-limit-aware GET retries.
 </p>
 
 <p align="center">
@@ -34,21 +34,60 @@ DAILY_DEV_KEY=your_daily_dev_api_token
 Keep this file private: do not commit API tokens to source control.
 
 ```python
-from snek.snekSDK import SnekSDK
-from snek.tokenSys import AutoApiToken
+import json
+
+from snek import AutoApiToken, SnekSDK
 
 client = SnekSDK(AutoApiToken())
-popular_posts = client.getPopularFeed()
+popular_posts = client.get_popular_feed()
 
-print(popular_posts)
-print("Remaining requests:", client.getRateRemaining())
+print(json.dumps(popular_posts, indent=2))
+```
+
+The client returns decoded JSON without reshaping it. A response has the API's
+`data` and `pagination` fields; a feed item includes its post, source, tags, and
+engagement fields. For example (post values vary):
+
+```json
+{
+  "data": [
+    {
+      "id": "post-123",
+      "title": "Building reliable Python services",
+      "url": "https://example.com/python-services",
+      "image": null,
+      "summary": "A practical guide to resilient services.",
+      "type": "article",
+      "publishedAt": "2026-10-27T12:00:00Z",
+      "createdAt": "2026-10-27T12:00:00Z",
+      "commentsPermalink": "https://daily.dev/posts/post-123",
+      "source": {
+        "id": "source-1",
+        "name": "Example Engineering",
+        "handle": "example",
+        "image": null
+      },
+      "tags": ["python"],
+      "readTime": 5,
+      "numUpvotes": 42,
+      "numComments": 7,
+      "author": {
+        "name": "A. Developer",
+        "image": null
+      }
+    }
+  ],
+  "pagination": {
+    "hasNextPage": true,
+    "cursor": "next-page-cursor"
+  }
+}
 ```
 
 Prefer explicit secret management? Pass the token directly:
 
 ```python
-from snek.snekSDK import SnekSDK
-from snek.tokenSys import ManualApiToken
+from snek import ManualApiToken, SnekSDK
 
 client = SnekSDK(ManualApiToken("your_daily_dev_api_token"))
 ```
@@ -60,10 +99,10 @@ When daily.dev returns HTTP `429 Too Many Requests`, the SDK automatically waits
 If a request still cannot proceed, the SDK raises `RateLimitError`, a `requests.HTTPError` subclass. It includes the original response and a suggested `retry_after` wait:
 
 ```python
-from snek.rawFetch import RateLimitError
+from snek import RateLimitError
 
 try:
-    posts = client.getPopularFeed()
+    posts = client.get_popular_feed()
 except RateLimitError as error:
     print(f"Rate limit reached. Try again in {error.retry_after} seconds.")
 ```
@@ -74,12 +113,16 @@ Rate-limit helpers report headers from the most recent API response. They return
 
 | Area | Examples |
 | --- | --- |
-| Feeds | Personalized, popular, discussed, tag, and source feeds |
+| Feeds | Personalized, popular, discussed, tag, source, and custom feeds |
 | Posts | Retrieve posts and their comments |
-| Search | Search posts, tags, and sources |
-| Bookmarks | Manage bookmarks and bookmark lists |
+| Search | Search posts, tags, sources, bookmarks, and plugins |
+| Plus and account tools | Bookmark lists, feed filters, notifications, and marketplace plugins |
 | Profile | Read and update your profile, stack, and experiences |
 | API utilities | Tags, keyword recommendations, rate-limit headers |
+
+OAuth 2.1 with PKCE and remote MCP-client setup are covered in the
+[OAuth and MCP guide](docs/oauth-mcp.md). See the [API reference](docs/api.md)
+for supported endpoints and upstream compatibility behavior.
 
 ## Documentation
 

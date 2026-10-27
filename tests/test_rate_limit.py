@@ -42,7 +42,7 @@ class RateLimitTests(unittest.TestCase):
         self.assertEqual(request.call_count, 2)
         self.assertEqual(
             request.call_args.kwargs["headers"]["Authorization"],
-            f"Bearer {token.get_token()}",
+            "Bearer test-token",
         )
         sleep.assert_called_once_with(2.0)
         self.assertEqual(
@@ -107,12 +107,13 @@ class RateLimitTests(unittest.TestCase):
         with patch.object(
             client.fetch,
             "get_rate_limit_header",
-            side_effect=["100", "42", "12345", None],
+            side_effect=["100", "42", "12345", None, "100"],
         ) as get_header:
+            self.assertEqual(client.get_rate_limit(), "100")
+            self.assertEqual(client.get_rate_remaining(), "42")
+            self.assertEqual(client.get_rate_reset_time(), "12345")
+            self.assertIsNone(client.get_retry_time())
             self.assertEqual(client.getRateLimit(), "100")
-            self.assertEqual(client.getRateRemaining(), "42")
-            self.assertEqual(client.getRateResetTime(), "12345")
-            self.assertIsNone(client.getRetryTime())
 
         self.assertEqual(
             [call.args[0] for call in get_header.call_args_list],
@@ -121,6 +122,7 @@ class RateLimitTests(unittest.TestCase):
                 "x-ratelimit-remaining",
                 "x-ratelimit-reset",
                 "retry-after",
+                "x-ratelimit-limit",
             ],
         )
 

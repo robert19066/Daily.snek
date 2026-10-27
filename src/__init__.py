@@ -3,5 +3,5 @@
 from . import snek
 
 __all__ = [
-    'snek',
+    "snek",
 ]

@@ -5,8 +5,9 @@ import time
 
 import requests
 
+from .errors import RateLimitError
 from .tokenSys import AutoApiToken, ManualApiToken
-from .errors import RateLimitError 
+
 
 class RawFetch:
     def __init__(
@@ -61,7 +62,7 @@ class RawFetch:
     ):
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         headers = {
-            "Authorization": f"Bearer {self.token.get_token()}",
+            "Authorization": "Bearer " + self.token.get_token(),
             "Accept": "application/json",
         }
         normalized_method = method.upper()

@@ -28,11 +28,10 @@ python -m pip install dailydotsnek
 Set your `DAILY_DEV_KEY` environment variable (or add it to a local `.env` file), then:
 
 ```python
-from snek.snekSDK import SnekSDK
-from snek.tokenSys import AutoApiToken
+from snek import AutoApiToken, SnekSDK
 
 client = SnekSDK(AutoApiToken())
-posts = client.getPopularFeed()
+posts = client.get_popular_feed()
 print(posts)
 ```
 
@@ -43,6 +42,7 @@ print(posts)
 - [Installation and authentication](installation.md)
 - [Quickstart, examples, and exceptions](usage.md)
 - [SDK method reference](api.md)
+- [OAuth apps and MCP integration](oauth-mcp.md)
 - [Rate-limit behavior](rate-limits.md)
 
 The source repository includes additional project guidance for [contributing](contributing.md), [releases](publishing.md), and the [changelog](changelog.md).
